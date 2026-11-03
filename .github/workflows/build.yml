@@ -24,22 +24,19 @@ jobs:
           gradle-version: current
 
       - name: Build
-        run: gradle build --no-daemon
+        run: |
+          FILE=$(find . -name settings.gradle -not -path "./.git/*" | head -n 1)
+          if [ -z "$FILE" ]; then echo "settings.gradle not found"; ls -R | head -50; exit 1; fi
+          DIR=$(dirname "$FILE")
+          echo "Project dir: $DIR"
+          cd "$DIR"
+          gradle build --no-daemon
 
       - name: Upload mod jar
         uses: actions/upload-artifact@v4
         with:
           name: DeathClientDLC
           path: |
-           - name: Build
-           working-directory: DeathClientDLC
-          run: gradle build --no-daemon
-
-      - name: Upload mod jar
-        uses: actions/upload-artifact@v4
-        with:
-          name: DeathClientDLC
-          path: |
-            DeathClientDLC/build/libs/*.jar
-            !DeathClientDLC/build/libs/*-sources.jar
-            !DeathClientDLC/build/libs/*-dev.jar
+            **/build/libs/*.jar
+            !**/build/libs/*-sources.jar
+            !**/build/libs/*-dev.jar
