@@ -18,37 +18,33 @@ jobs:
           distribution: temurin
           java-version: 21
 
+      # No gradlew in the repo, so install Gradle through the action.
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: current
 
-      - name: Unzip project
-        run: |
-          if [ -z "$(find . -name settings.gradle -not -path './.git/*' -not -path './src_unzipped/*' | head -n 1)" ]; then
-            ZIP=$(find . -maxdepth 2 -name "*.zip" -not -path './.git/*' | head -n 1)
-            if [ -z "$ZIP" ]; then echo "No zip and no settings.gradle found"; ls -R | head -50; exit 1; fi
-            echo "Unzipping $ZIP"
-            mkdir -p src_unzipped
-            unzip -q "$ZIP" -d src_unzipped
-          else
-            echo "Project already unpacked, skipping unzip"
-          fi
-
       - name: Build
+        run: gradle build --no-daemon
+
+      # Runs only when Build failed: prints the real RenderLayer / VertexConsumer method names.
+      - name: Dump RenderLayer API
+        if: failure()
         run: |
-          FILE=$(find . -name settings.gradle -not -path './.git/*' | head -n 1)
-          if [ -z "$FILE" ]; then echo "settings.gradle not found"; ls -R | head -50; exit 1; fi
-          DIR=$(dirname "$FILE")
-          echo "Project dir: $DIR"
-          cd "$DIR"
-          gradle build --no-daemon
+          for j in $(find ~/.gradle/caches/fabric-loom -name "*.jar" 2>/dev/null); do
+            if unzip -l "$j" | grep -q "net/minecraft/client/render/RenderLayer.class"; then
+              echo "=== JAR: $j"
+              javap -cp "$j" net.minecraft.client.render.RenderLayer | grep -i "static.*RenderLayer get"
+              javap -cp "$j" net.minecraft.client.render.VertexConsumer | grep -i "vertex\|color"
+              break
+            fi
+          done
 
       - name: Upload mod jar
         uses: actions/upload-artifact@v4
         with:
           name: DeathClientDLC
           path: |
-            **/build/libs/*.jar
-            !**/build/libs/*-sources.jar
-            !**/build/libs/*-dev.jar
+            build/libs/*.jar
+            !build/libs/*-sources.jar
+            !build/libs/*-dev.jar
