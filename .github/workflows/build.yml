@@ -24,18 +24,33 @@ jobs:
         with:
           gradle-version: current
 
+      - name: Unzip project
+        run: |
+          ZIP=$(find . -name "*.zip" -not -path "./.git/*" | head -n 1)
+          echo "ZIP=$ZIP"
+          mkdir -p src_unzipped
+          unzip -q "$ZIP" -d src_unzipped
+
       - name: Build
-        run: gradle build --no-daemon
+        run: |
+          FILE=$(find . -name settings.gradle -not -path './.git/*' | head -n 1)
+          echo "Project dir: $(dirname "$FILE")"
+          cd "$(dirname "$FILE")"
+          gradle build --no-daemon
 
       # Runs only when Build failed: prints the real RenderLayer / VertexConsumer method names.
       - name: Dump RenderLayer API
         if: failure()
         run: |
-          for j in $(find ~/.gradle/caches/fabric-loom -name "*.jar" 2>/dev/null); do
+          for j in $(find /home/runner/.gradle/caches/fabric-loom -name "*.jar" 2>/dev/null); do
             if unzip -l "$j" | grep -q "net/minecraft/client/render/RenderLayer.class"; then
               echo "=== JAR: $j"
-              javap -cp "$j" net.minecraft.client.render.RenderLayer | grep -i "static.*RenderLayer get"
-              javap -cp "$j" net.minecraft.client.render.VertexConsumer | grep -i "vertex\|color"
+              javap -cp "$j" net.minecraft.client.render.RenderLayer > /tmp/rl.txt || true
+              javap -cp "$j" net.minecraft.client.render.VertexConsumer > /tmp/vc.txt || true
+              echo "--- RenderLayer:"
+              grep -i "RenderLayer get" /tmp/rl.txt || true
+              echo "--- VertexConsumer:"
+              grep -i "vertex\|color" /tmp/vc.txt || true
               break
             fi
           done
@@ -45,6 +60,6 @@ jobs:
         with:
           name: DeathClientDLC
           path: |
-            build/libs/*.jar
-            !build/libs/*-sources.jar
-            !build/libs/*-dev.jar
+            src_unzipped/**/build/libs/*.jar
+            !src_unzipped/**/build/libs/*-sources.jar
+            !src_unzipped/**/build/libs/*-dev.jar
