@@ -13,17 +13,13 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-24.04
-    defaults:
-      run:
-        working-directory: DeathClientDLC
 
     steps:
       - name: Checkout
         uses: actions/checkout@v5
 
       - name: Unpack project
-        working-directory: .
-        run: unzip -q DeathClientDLC_43.zip
+        run: unzip -qo DeathClientDLC_43.zip
 
       - name: Set up JDK 21
         uses: actions/setup-java@v5
@@ -34,9 +30,10 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: '8.11'
+          gradle-version: '9.2.0'
 
       - name: Build with Gradle
+        working-directory: DeathClientDLC
         run: gradle build --stacktrace
 
       - name: Upload jar
