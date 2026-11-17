@@ -13,10 +13,17 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: DeathClientDLC
 
     steps:
       - name: Checkout
         uses: actions/checkout@v5
+
+      - name: Unpack project
+        working-directory: .
+        run: unzip -q DeathClientDLC_43.zip
 
       - name: Set up JDK 21
         uses: actions/setup-java@v5
@@ -36,5 +43,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: DeathClientDLC
-          path: build/libs/*.jar
+          path: DeathClientDLC/build/libs/*.jar
           if-no-files-found: error
