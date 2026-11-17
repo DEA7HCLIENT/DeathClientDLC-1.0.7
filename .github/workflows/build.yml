@@ -1,8 +1,10 @@
-name: Fabric Mod Build
+name: Build
 
 on:
   push:
-    branches: [main, master]
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
   workflow_dispatch:
 
 permissions:
@@ -11,81 +13,25 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Java
+      - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
-          distribution: temurin
+          distribution: 'temurin'
           java-version: '21'
 
-      - name: Find and extract source ZIP
-        shell: bash
-        run: |
-          set -e
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
 
-          ZIP=$(find . -type f \( \
-            -iname "*.zip" -o \
-            -iname "*.zip.bak" \
-          \) -not -path "./.git/*" | head -n 1)
+      - name: Build with Gradle
+        run: ./gradlew build --stacktrace
 
-          if [ -z "$ZIP" ]; then
-            echo "No source ZIP found"
-            exit 1
-          fi
-
-          mkdir -p source
-          unzip -o "$ZIP" -d source
-
-      - name: Locate Gradle project
-        id: project
-        shell: bash
-        run: |
-          set -e
-
-          PROJECT=$(find source -name gradlew -type f \
-            -not -path "*/.gradle/*" | head -n 1)
-
-          if [ -z "$PROJECT" ]; then
-            echo "No Gradle wrapper found."
-            echo "The ZIP must contain a Fabric Gradle project."
-            find source -maxdepth 4 -type f
-            exit 1
-          fi
-
-          DIR=$(dirname "$PROJECT")
-          echo "dir=$DIR" >> "$GITHUB_OUTPUT"
-
-      - name: Build Fabric JAR
-        working-directory: ${{ steps.project.outputs.dir }}
-        run: |
-          chmod +x ./gradlew
-          ./gradlew clean build --no-daemon
-
-      - name: Collect JAR files
-        shell: bash
-        run: |
-          mkdir -p output
-
-          find source -path "*/build/libs/*.jar" \
-            ! -name "*-dev.jar" \
-            ! -name "*-sources.jar" \
-            -exec cp {} output/ \;
-
-          if [ -z "$(find output -name '*.jar' -print -quit)" ]; then
-            echo "No JAR generated!"
-            exit 1
-          fi
-
-          ls -lh output/
-
-      - name: Upload Fabric Mod
+      - name: Upload jar
         uses: actions/upload-artifact@v4
         with:
-          name: Fabric-Mod-JAR
-          path: output/*.jar
+          name: DeathClientDLC
+          path: build/libs/*.jar
           if-no-files-found: error
-          retention-days: 14
