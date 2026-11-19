@@ -16,6 +16,20 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Find project root
+        id: root
+        run: |
+          FILE=$(find . -name build.gradle -not -path '*/build/*' -not -path './.git/*' | head -n 1)
+          if [ -z "$FILE" ]; then
+            echo "::error::build.gradle не найден ни в одной папке репозитория. Загрузите файлы проекта."
+            echo "Список файлов в репозитории:"
+            find . -path ./.git -prune -o -print | head -n 100
+            exit 1
+          fi
+          DIR=$(dirname "$FILE")
+          echo "Нашёл проект в: $DIR"
+          echo "dir=$DIR" >> "$GITHUB_OUTPUT"
+
       - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
@@ -26,14 +40,6 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.11'
-
-      - name: Find project root
-        id: root
-        run: |
-          FILE=$(find . -name build.gradle -not -path '*/build/*' -not -path './.git/*' | head -n 1)
-          DIR=$(dirname "$FILE")
-          echo "Project root: $DIR"
-          echo "dir=$DIR" >> "$GITHUB_OUTPUT"
 
       - name: Build
         working-directory: ${{ steps.root.outputs.dir }}
