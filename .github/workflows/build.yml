@@ -16,18 +16,25 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Unpack project zip
+        run: |
+          shopt -s nullglob
+          for z in *.zip; do
+            echo "Распаковываю $z"
+            unzip -qo "$z" -d .
+          done
+
       - name: Find project root
         id: root
         run: |
           FILE=$(find . -name build.gradle -not -path '*/build/*' -not -path './.git/*' | head -n 1)
           if [ -z "$FILE" ]; then
-            echo "::error::build.gradle не найден ни в одной папке репозитория. Загрузите файлы проекта."
-            echo "Список файлов в репозитории:"
+            echo "::error::build.gradle не найден ни в репозитории, ни в архивах."
             find . -path ./.git -prune -o -print | head -n 100
             exit 1
           fi
           DIR=$(dirname "$FILE")
-          echo "Нашёл проект в: $DIR"
+          echo "Проект найден в: $DIR"
           echo "dir=$DIR" >> "$GITHUB_OUTPUT"
 
       - name: Set up JDK 21
