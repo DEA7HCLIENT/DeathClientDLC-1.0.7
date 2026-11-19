@@ -2,9 +2,7 @@ name: Build
 
 on:
   push:
-    branches: [ "main" ]
   pull_request:
-    branches: [ "main" ]
   workflow_dispatch:
 
 permissions:
@@ -24,17 +22,26 @@ jobs:
           distribution: 'temurin'
           java-version: '21'
 
-      - name: Set up Gradle
+      - name: Set up Gradle 8.11
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.11'
 
-      - name: Build with Gradle
+      - name: Find project root
+        id: root
+        run: |
+          FILE=$(find . -name build.gradle -not -path '*/build/*' -not -path './.git/*' | head -n 1)
+          DIR=$(dirname "$FILE")
+          echo "Project root: $DIR"
+          echo "dir=$DIR" >> "$GITHUB_OUTPUT"
+
+      - name: Build
+        working-directory: ${{ steps.root.outputs.dir }}
         run: gradle build --stacktrace
 
       - name: Upload jar
         uses: actions/upload-artifact@v4
         with:
           name: DeathClientDLC
-          path: build/libs/*.jar
+          path: ${{ steps.root.outputs.dir }}/build/libs/*.jar
           if-no-files-found: error
